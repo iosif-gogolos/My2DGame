@@ -1,6 +1,7 @@
 package main;
 
 import entity.Player;
+import tile.TileManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,21 +12,17 @@ public class GamePanel extends JPanel implements Runnable {
     final int scale= 3;
 
     public final int tileSize = originalTileSize * scale; //48 x 48 tile
-    final int maxScreenCol = 16; // change if you want
-    final int maxScreenRow = 12;
-    final int screenWidth = tileSize * maxScreenCol; // 768 pixels
-    final int screenHeight = tileSize * maxScreenRow; // 576 pixels
+    public final int maxScreenCol = 16; // change if you want
+    public final int maxScreenRow = 12;
+    public final int screenWidth = tileSize * maxScreenCol; // 768 pixels
+    public final int screenHeight = tileSize * maxScreenRow; // 576 pixels
 
     // FPS
     int FPS = 60;
-
+    TileManager tileM = new TileManager(this);
     KeyHandler keyH = new KeyHandler();
     Thread gameThread;     // Start time to make character move 60 fps: keeps program running until stopping
     Player player = new Player(this, keyH);
-
-    int playerX = 100;    // Set Player's default position
-    int playerY = 100;
-    int playerSpeed = 4;
 
     public GamePanel(){
         this.setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -44,34 +41,38 @@ public class GamePanel extends JPanel implements Runnable {
     public void run(){
         // Create game loop that will be the core of our game
 
-        // Sleep method
-        double drawInterval = 1000000000/FPS; // 1bn ~ 1 second, we use 1bn nanoseconds by 60 FPS -> 16,666,666.667 -> 0.0166666667 draw interval
-        double nextDrawTime = System.nanoTime() + drawInterval;
+        // Delta/ Accumulator method
 
+        double drawInterval = 1000000000/FPS;
+        double delta = 0;
+        long lastTime = System.nanoTime(); // more precise than millis
+        long currentTime;
+        // Display FPS
+        long timer = 0;
+        int drawCount = 0;
 
         while(gameThread != null){
 
-            update();
+            currentTime = System.nanoTime();
 
-            repaint();
+            delta += (currentTime - lastTime) / drawInterval;
+            timer += (currentTime - lastTime); // in every loop we add the passed time to this timer
 
-            try {
-                double remainingTime = nextDrawTime - System.nanoTime();
-                remainingTime = remainingTime/1000000; // by 1 mn to convert into nanoseconds
+            lastTime = currentTime;
 
-                if(remainingTime < 0){
-                    remainingTime = 0;
-                }
-
-                Thread.sleep((long) remainingTime); // pause the game until this sleepTime is over
-
-                nextDrawTime += drawInterval; /// 0.16666 seconds later
-
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+            if(delta >= 1) {
+                update();
+                repaint();
+                delta--;
+                drawCount++;
             }
-
+            if(timer >= 1000000000) {
+                System.out.println("FPS:" + drawCount);
+                drawCount = 0;
+                timer = 0;
+            }
         }
+
 
     }
     public void update(){
@@ -83,7 +84,7 @@ public class GamePanel extends JPanel implements Runnable {
         super.paintComponent(g);
 
         Graphics2D g2 = (Graphics2D)g;
-
+        tileM.draw(g2); // before Player: tiles first, then player
         player.draw(g2);
 
         g2.dispose();
