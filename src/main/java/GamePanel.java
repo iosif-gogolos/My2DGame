@@ -38,15 +38,37 @@ public class GamePanel extends JPanel implements Runnable {
     @Override
     public void run(){
         // Create game loop that will be the core of our game
-        while(gameThread != null){
 
-            long currentTime = System.nanoTime(); // Returns the current value of the running Java Virtual Machine's high-resolution time source in nanoseconds, //long currentTime2 =  System.currentTimeMillis(); // 1,000 milliseconds = 1 seconds
-            System.out.println("current Time: "+currentTime);
+        // Sleep method
+        double drawInterval = 1000000000/FPS; // 1bn ~ 1 second, we use 1bn nanoseconds by 60 FPS -> 16,666,666.667 -> 0.0166666667 draw interval
+        double nextDrawTime = System.nanoTime() + drawInterval;
+
+
+
+        while(gameThread != null){
 
             update();
 
             repaint();
-            // --------------- We need to know how much time passed
+
+
+            try {
+                double remainingTime = nextDrawTime - System.nanoTime();
+                remainingTime = remainingTime/1000000; // by 1 mn to convert into nanoseconds
+
+                if(remainingTime < 0){
+                    remainingTime = 0;
+                }
+
+
+                Thread.sleep((long) remainingTime); // pause the game until this sleepTime is over
+
+                nextDrawTime += drawInterval; /// 0.16666 seconds later
+
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
         }
 
     }
